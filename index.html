@@ -10,14 +10,35 @@
     .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 15px; }
     .form-group { position: relative; margin-bottom: 15px; }
     input[type="text"], input[type="number"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-    .search-results { position: absolute; width: 100%; background: white; border: 1px solid #ccc; border-radius: 6px; max-height: 150px; overflow-y: auto; z-index: 10; list-style: none; padding: 0; margin: 5px 0 0 0; }
-    .search-results li { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 14px; }
-    .search-results li:hover { background-color: #f0f0f0; }
-    .selected-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; background: #f1f5f9; padding: 8px 12px; border-radius: 6px; }
-    .selected-item input { width: 70px; text-align: right; }
+    
+    /* สไตล์แถบดรอปดาวน์แนะนำชื่อกองทุน */
+    .search-results { 
+      position: absolute; 
+      width: 100%; 
+      background: white; 
+      border: 1px solid #06C755; 
+      border-radius: 6px; 
+      max-height: 200px; 
+      overflow-y: auto; 
+      z-index: 999; 
+      list-style: none; 
+      padding: 0; 
+      margin: 4px 0 0 0; 
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .search-results li { 
+      padding: 10px 12px; 
+      cursor: pointer; 
+      border-bottom: 1px solid #eee; 
+      font-size: 14px; 
+    }
+    .search-results li:hover { background-color: #e8f5e9; }
+    
+    .selected-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; background: #f1f5f9; padding: 10px 12px; border-radius: 6px; }
+    .selected-item input { width: 80px; text-align: right; font-size: 15px; font-weight: bold; }
     .btn { background: #06C755; color: white; border: none; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 8px; width: 100%; cursor: pointer; }
-    .btn:disabled { background: #ccc; }
-    .total-weight { text-align: right; font-weight: bold; margin-top: 10px; }
+    .btn:disabled { background: #ccc; cursor: not-allowed; }
+    .total-weight { text-align: right; font-weight: bold; margin-top: 10px; font-size: 16px; }
   </style>
 </head>
 <body>
@@ -32,13 +53,13 @@
   <div class="card">
     <h3>1. ค้นหาและเลือกกองทุน</h3>
     <div class="form-group">
-      <input type="text" id="searchInput" placeholder="พิมพ์ชื่อกองทุน เช่น K-CASH, SCB..." oninput="onSearch(this.value)">
+      <input type="text" id="searchInput" placeholder="พิมพ์เพื่อค้นหา เช่น SCB, K-CASH..." oninput="onSearch(this.value)" autocomplete="off">
       <ul id="searchResults" class="search-results" style="display: none;"></ul>
     </div>
 
     <h3>2. สัดส่วนการลงทุน (รวมต้องได้ 100%)</h3>
     <div id="selectedFundsList">
-      <p style="color: #888; font-size: 14px;">ยังไม่ได้เลือกรวมกองทุน</p>
+      <p style="color: #888; font-size: 14px;">ยังไม่ได้เลือกรวมกองทุน (พิมพ์ค้นหาด้านบนแล้วคลิกเลือกกองทุน)</p>
     </div>
     <div class="total-weight">
       สัดส่วนรวม: <span id="totalWeight">0</span>%
@@ -48,7 +69,8 @@
   <button id="submitBtn" class="btn" onclick="submitPortfolio()" disabled>ยืนยันการจัดพอร์ต</button>
 
   <script>
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyH3GCTvEilhxMtc4YCLbu_8V8hVHrTBgbhYXtXZCtr_IkOIxp9LSyymxMIDkxKjDkb/exec"; 
+    // ⚠️ ใส่ Web App URL ของ Google Apps Script ของคุณ
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx.../exec"; 
     const MY_LIFF_ID = "2011677026-ti2t0BRg"; 
 
     let userProfile = {};
@@ -71,40 +93,43 @@
 
     document.addEventListener("DOMContentLoaded", main);
 
-    // ค้นหากองทุนจาก SEC ผ่าน GAS
+    // ค้นหากองทุนและแสดงเป็นรายการดรอปดาวน์
     function onSearch(keyword) {
       clearTimeout(searchTimeout);
       const resultsUl = document.getElementById('searchResults');
       
-      if (!keyword || keyword.length < 2) {
+      if (!keyword || keyword.trim() === '') {
         resultsUl.style.display = 'none';
         return;
       }
 
       searchTimeout = setTimeout(async () => {
         try {
-          const res = await fetch(`${GAS_WEB_APP_URL}?action=getFunds&q=${encodeURIComponent(keyword)}`);
+          const res = await fetch(`${GAS_WEB_APP_URL}?action=getFunds&q=${encodeURIComponent(keyword.trim())}`);
           const funds = await res.json();
           
           resultsUl.innerHTML = '';
           if (Array.isArray(funds) && funds.length > 0) {
             funds.forEach(fund => {
               const li = document.createElement('li');
-              li.innerText = `${fund.proj_abbr_name || ''} - ${fund.proj_name_th || ''}`;
+              const nameAbbr = fund.proj_abbr_name || 'FUND';
+              const nameTh = fund.proj_name_th || '';
+              li.innerHTML = `<strong>${nameAbbr}</strong> - <small>${nameTh}</small>`;
               li.onclick = () => addFund(fund);
               resultsUl.appendChild(li);
             });
             resultsUl.style.display = 'block';
           } else {
-            resultsUl.style.display = 'none';
+            resultsUl.innerHTML = '<li style="color:#888;">ไม่พบรายชื่อกองทุน</li>';
+            resultsUl.style.display = 'block';
           }
         } catch (e) {
           console.error(e);
         }
-      }, 300);
+      }, 200);
     }
 
-    // เพิ่มกองทุนที่เลือกลงในรายการ
+    // เมื่อคลิกเลือกกองทุนจากแถบดรอปดาวน์
     function addFund(fund) {
       document.getElementById('searchResults').style.display = 'none';
       document.getElementById('searchInput').value = '';
@@ -124,11 +149,11 @@
       renderSelectedFunds();
     }
 
-    // แสดงรายการกองทุนที่เลือกไว้
+    // แสดงกองทุนที่เลือก พร้อมช่องกรอก %
     function renderSelectedFunds() {
       const container = document.getElementById('selectedFundsList');
       if (selectedFunds.length === 0) {
-        container.innerHTML = '<p style="color: #888; font-size: 14px;">ยังไม่ได้เลือกรวมกองทุน</p>';
+        container.innerHTML = '<p style="color: #888; font-size: 14px;">ยังไม่ได้เลือกรวมกองทุน (พิมพ์ค้นหาด้านบนแล้วคลิกเลือกกองทุน)</p>';
         updateTotal();
         return;
       }
@@ -142,8 +167,8 @@
             <strong>${item.fundId}</strong>
           </div>
           <div>
-            <input type="number" value="${item.weight}" min="0" max="100" onchange="updateWeight(${index}, this.value)"> %
-            <button onclick="removeFund(${index})" style="color:red; border:none; background:none; cursor:pointer;">✕</button>
+            <input type="number" value="${item.weight === 0 ? '' : item.weight}" placeholder="0" min="0" max="100" oninput="updateWeight(${index}, this.value)"> %
+            <button onclick="removeFund(${index})" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold; margin-left:5px;">✕</button>
           </div>
         `;
         container.appendChild(div);
@@ -167,7 +192,6 @@
       document.getElementById('totalWeight').innerText = total;
       
       const submitBtn = document.getElementById('submitBtn');
-      // ปุ่มจะกดได้ก็ต่อเมื่อเลือกอย่างน้อย 1 กองทุน และผลรวม % เท่ากับ 100
       if (selectedFunds.length > 0 && total === 100) {
         submitBtn.disabled = false;
       } else {
@@ -175,7 +199,6 @@
       }
     }
 
-    // ส่งข้อมูลไปเซฟที่ GAS
     async function submitPortfolio() {
       if (!userProfile.userId) {
         alert("ไม่พบข้อมูลผู้ใช้");
