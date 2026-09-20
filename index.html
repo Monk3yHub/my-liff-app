@@ -53,7 +53,7 @@
     .dropdown-list {
       position: absolute; top: 105%; left: 0; right: 0; background: white;
       border: 1px solid var(--border-color); border-radius: 10px;
-      max-height: 200px; overflow-y: auto; z-index: 100; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      max-height: 220px; overflow-y: auto; z-index: 100; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
       list-style: none; padding: 0; margin: 0; display: none;
     }
     .dropdown-list li { padding: 12px 15px; border-bottom: 1px solid #F7FAFC; cursor: pointer; }
@@ -105,16 +105,16 @@
     <div class="capital-tag">เงินลงทุนเริ่มต้น: 1,000,000 บาท</div>
   </div>
 
-  <!-- Step 1: Select Funds -->
+  <!-- Step 1: Search & Select Funds -->
   <div class="card">
     <div class="card-title">1. ค้นหา & เลือกกองทุน</div>
     <div class="search-box">
-      <input type="text" class="search-input" id="searchInput" placeholder="พิมพ์ชื่อกองทุน เช่น SCB, K-CASH..." oninput="onSearch(this.value)" autocomplete="off">
+      <input type="text" class="search-input" id="searchInput" placeholder="พิมพ์ชื่อกองทุน เช่น KT-TECHNOLOGY, SCBDV..." oninput="onSearch(this.value)" autocomplete="off">
       <ul id="searchResults" class="dropdown-list"></ul>
     </div>
   </div>
 
-  <!-- Step 2: Allocation & Metrics -->
+  <!-- Step 2: Allocation -->
   <div class="card">
     <div class="card-title">
       <span>2. กำหนดสัดส่วนลงทุน</span>
@@ -153,7 +153,7 @@
 
 <script>
   // ⚠️ เปลี่ยนเป็น Web App URL และ LIFF ID ของคุณ
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx.../exec";
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxwM3iutTwHRkBc6d1NhcV9tTKpYhoUrL8lLChLM_4wMqOIlIEPkmfo9rSlUXMdYPZS/exec";
   const MY_LIFF_ID = "2011677026-ti2t0BRg";
 
   let userProfile = {};
@@ -161,7 +161,7 @@
   let searchTimeout;
   let myChart = null;
 
-  // รายชื่อกองทุน Guideline สำหรับแสดงทันทีเมื่อกดคลิกช่องค้นหา
+  // รายชื่อกองทุน Guideline สำหรับแสดงทันทีเมื่อคลิกช่องค้นหา
   const defaultGuidelineFunds = [
     { proj_id: "M0001", proj_abbr_name: "SCBDV", proj_name_th: "กองทุนเปิดไทยพาณิชย์หุ้นปันผล", return: 8.5, risk: 15.2 },
     { proj_id: "M0003", proj_abbr_name: "K-CASH", proj_name_th: "กองทุนเปิดเค ตลาดเงิน", return: 1.8, risk: 0.5 },
@@ -177,7 +177,7 @@
     const searchInput = document.getElementById('searchInput');
     searchInput.addEventListener('focus', () => {
       if (!searchInput.value.trim()) {
-        renderDropdownList(defaultGuidelineFunds, "💡 กองทุนแนะนำ / ยอดนิยม");
+        renderDropdownList(defaultGuidelineFunds, "💡 กองทุนแนะนำ / ยอดนิยม", "");
       }
     });
 
@@ -206,26 +206,31 @@
   // ค้นหากองทุน
   function onSearch(keyword) {
     clearTimeout(searchTimeout);
+    const kw = keyword ? keyword.trim() : "";
     
-    if (!keyword || keyword.trim() === '') {
-      renderDropdownList(defaultGuidelineFunds, "💡 กองทุนแนะนำ / ยอดนิยม");
+    if (!kw) {
+      renderDropdownList(defaultGuidelineFunds, "💡 กองทุนแนะนำ / ยอดนิยม", kw);
       return;
     }
 
     searchTimeout = setTimeout(async () => {
       try {
-        const res = await fetch(`${GAS_WEB_APP_URL}?action=getFunds&q=${encodeURIComponent(keyword.trim())}`);
+        const res = await fetch(`${GAS_WEB_APP_URL}?action=getFunds&q=${encodeURIComponent(kw)}`);
         const funds = await res.json();
-        renderDropdownList(funds, "ผลการค้นหา");
-      } catch (e) { console.error(e); }
+        renderDropdownList(funds, `ผลการค้นหาสำหรับ "${kw}"`, kw);
+      } catch (e) {
+        console.error(e);
+        renderDropdownList([], `ผลการค้นหาสำหรับ "${kw}"`, kw);
+      }
     }, 250);
   }
 
   // แสดงผล Dropdown รายชื่อกองทุน
-  function renderDropdownList(funds, title) {
+  function renderDropdownList(funds, title, currentKeyword) {
     const resultsUl = document.getElementById('searchResults');
     resultsUl.innerHTML = `<li style="font-size:12px; color:#718096; background:#F7FAFC; cursor:default; padding:6px 15px;">${title}</li>`;
     
+    // 1. แสดงรายการกองทุนจาก API / Guideline
     if (Array.isArray(funds) && funds.length > 0) {
       funds.forEach(fund => {
         const li = document.createElement('li');
@@ -233,10 +238,27 @@
         li.onclick = () => addFund(fund);
         resultsUl.appendChild(li);
       });
-      resultsUl.style.display = 'block';
-    } else {
-      resultsUl.style.display = 'none';
     }
+
+    // 2. ปุ่มเพิ่มกองทุนที่พิมพ์เอง
+    if (currentKeyword && currentKeyword.length > 0) {
+      const customLi = document.createElement('li');
+      customLi.style.backgroundColor = '#E8F5E9';
+      customLi.style.borderTop = '1px dashed #06C755';
+      customLi.innerHTML = `<strong style="color:#05a847;">➕ เพิ่มกองทุน "${currentKeyword.toUpperCase()}"</strong> <br><small style="color:#718096">ใช้ชื่อกองทุนตามที่คุณพิมพ์</small>`;
+      customLi.onclick = () => {
+        addFund({
+          proj_id: 'CUSTOM_' + Date.now(),
+          proj_abbr_name: currentKeyword.toUpperCase(),
+          proj_name_th: `กองทุน ${currentKeyword.toUpperCase()}`,
+          return: 10.0,
+          risk: 15.0
+        });
+      };
+      resultsUl.appendChild(customLi);
+    }
+
+    resultsUl.style.display = 'block';
   }
 
   // เพิ่มกองทุนลงในข้อ 2
@@ -244,7 +266,7 @@
     document.getElementById('searchResults').style.display = 'none';
     document.getElementById('searchInput').value = '';
 
-    if (selectedFunds.find(f => f.projId === fund.proj_id)) {
+    if (selectedFunds.find(f => f.projId === fund.proj_id || f.fundId === fund.proj_abbr_name)) {
       alert("เลือกกองทุนนี้ไปแล้วครับ");
       return;
     }
@@ -253,14 +275,14 @@
       fundId: fund.proj_abbr_name || 'FUND',
       projId: fund.proj_id,
       weight: 0,
-      expectedReturn: fund.return || 5.0,
-      risk: fund.risk || 10.0
+      expectedReturn: fund.return || 8.0,
+      risk: fund.risk || 12.0
     });
 
     renderSelectedFunds();
   }
 
-  // Render รายการกองทุนเพื่อให้กรอกสัดส่วน (%)
+  // Render รายการกองทุนที่เลือกเพื่อให้ใส่สัดส่วน (%)
   function renderSelectedFunds() {
     const container = document.getElementById('selectedFundsList');
     if (selectedFunds.length === 0) {
@@ -298,6 +320,7 @@
     renderSelectedFunds();
   }
 
+  // คำนวณ Return, Risk, Sharpe Ratio
   function calculatePortfolioMetrics() {
     const totalWeight = selectedFunds.reduce((sum, f) => sum + f.weight, 0);
     const badge = document.getElementById('totalBadge');
@@ -378,6 +401,7 @@
     myChart.update();
   }
 
+  // บันทึกข้อมูล
   async function submitPortfolio() {
     const payload = {
       userId: userProfile.userId || "GUEST",
@@ -411,3 +435,6 @@
     }
   }
 </script>
+
+</body>
+</html>
