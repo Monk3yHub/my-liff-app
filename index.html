@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Investment Simulator</title>
+  <!-- โหลด LIFF SDK จาก LINE -->
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 500px; margin: auto; }
+    .btn { background: #06C755; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 8px; width: 100%; cursor: pointer; }
+    .card { border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+  </style>
+</head>
+<body>
+
+  <h2>จัดพอร์ตจำลองการลงทุน</h2>
+  <div class="card">
+    <p><strong>ผู้ใช้งาน:</strong> <span id="userName">กำลังโหลด...</span></p>
+    <p><strong>เงินลงทุนเริ่มต้น:</strong> 1,000,000 บาท</p>
+  </div>
+
+  <button class="btn" onclick="submitPortfolio()">ยืนยันการจัดพอร์ต</button>
+
+  <script>
+    // -------------------------------------------------------------
+    // 1. นำ Web App URL ของ Google Apps Script มาวางตรงนี้
+    // -------------------------------------------------------------
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz0TMfIplvDxKgmWxjDC-19Pdm2WWea41594mkRTOIkFzEk4mVxaQK_OXGI_auySEyx/exec"; 
+    
+    // 2. LIFF ID ของคุณ (เอามาจาก LINE Developers)
+    const MY_LIFF_ID = "2011677026-ti2t0BRg"; 
+
+    let userProfile = {};
+
+    // เริ่มต้นการทำงานของ LIFF
+    async function main() {
+      try {
+        await liff.init({ liffId: MY_LIFF_ID });
+        if (!liff.isLoggedIn()) {
+          liff.login();
+        } else {
+          userProfile = await liff.getProfile();
+          document.getElementById('userName').innerText = userProfile.displayName;
+        }
+      } catch (err) {
+        console.error("LIFF Init Error", err);
+      }
+    }
+    main();
+
+    // ฟังก์ชันยิงข้อมูลไปยัง Google Apps Script
+    async function submitPortfolio() {
+      if (!userProfile.userId) {
+        alert("ไม่พบข้อมูลผู้ใช้ LINE");
+        return;
+      }
+
+      // Payload จำลองสัดส่วนพอร์ต
+      const payload = {
+        userId: userProfile.userId,
+        displayName: userProfile.displayName,
+        totalCapital: 1000000,
+        selectedFunds: [
+          { fundId: "K-CASH", projId: "M0000_2560", weight: 60 },
+          { fundId: "SCBDV", projId: "M0000_2560", weight": 40 }
+        ]
+      };
+
+      try {
+        const response = await fetch(GAS_WEB_APP_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (result.status === "success") {
+          alert("บันทึกพอร์ตเรียบร้อยแล้ว!");
+          liff.closeWindow(); // ปิดหน้าต่าง LIFF กลับเข้าแชท
+        } else {
+          alert("เกิดข้อผิดพลาด: " + result.message);
+        }
+      } catch (error) {
+        alert("ส่งข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+        console.error(error);
+      }
+    }
+  </script>
+</body>
+</html>
