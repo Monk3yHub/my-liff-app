@@ -3,67 +3,182 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Investment Simulator</title>
-  <!-- โหลด LIFF SDK -->
+  <title>จัดพอร์ตจำลองการลงทุน</title>
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    body { font-family: sans-serif; padding: 20px; max-width: 500px; margin: auto; }
-    .btn { background: #06C755; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 8px; width: 100%; cursor: pointer; }
-    .card { border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 20px; max-width: 500px; margin: auto; background-color: #f9f9f9; }
+    .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 15px; }
+    .form-group { position: relative; margin-bottom: 15px; }
+    input[type="text"], input[type="number"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+    .search-results { position: absolute; width: 100%; background: white; border: 1px solid #ccc; border-radius: 6px; max-height: 150px; overflow-y: auto; z-index: 10; list-style: none; padding: 0; margin: 5px 0 0 0; }
+    .search-results li { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 14px; }
+    .search-results li:hover { background-color: #f0f0f0; }
+    .selected-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; background: #f1f5f9; padding: 8px 12px; border-radius: 6px; }
+    .selected-item input { width: 70px; text-align: right; }
+    .btn { background: #06C755; color: white; border: none; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 8px; width: 100%; cursor: pointer; }
+    .btn:disabled { background: #ccc; }
+    .total-weight { text-align: right; font-weight: bold; margin-top: 10px; }
   </style>
 </head>
 <body>
 
   <h2>จัดพอร์ตจำลองการลงทุน</h2>
+
   <div class="card">
     <p><strong>ผู้ใช้งาน:</strong> <span id="userName">กำลังโหลด...</span></p>
     <p><strong>เงินลงทุนเริ่มต้น:</strong> 1,000,000 บาท</p>
   </div>
 
-  <button class="btn" onclick="submitPortfolio()">ยืนยันการจัดพอร์ต</button>
+  <div class="card">
+    <h3>1. ค้นหาและเลือกกองทุน</h3>
+    <div class="form-group">
+      <input type="text" id="searchInput" placeholder="พิมพ์ชื่อกองทุน เช่น K-CASH, SCB..." oninput="onSearch(this.value)">
+      <ul id="searchResults" class="search-results" style="display: none;"></ul>
+    </div>
+
+    <h3>2. สัดส่วนการลงทุน (รวมต้องได้ 100%)</h3>
+    <div id="selectedFundsList">
+      <p style="color: #888; font-size: 14px;">ยังไม่ได้เลือกรวมกองทุน</p>
+    </div>
+    <div class="total-weight">
+      สัดส่วนรวม: <span id="totalWeight">0</span>%
+    </div>
+  </div>
+
+  <button id="submitBtn" class="btn" onclick="submitPortfolio()" disabled>ยืนยันการจัดพอร์ต</button>
 
   <script>
-    // 1. ใส่ URL Google Apps Script ตัวที่ลงท้ายด้วย /exec
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz0TMfIplvDxKgmWxjDC-19Pdm2WWea41594mkRTOIkFzEk4mVxaQK_OXGI_auySEyx/exec"; 
-    
-    // 2. ใส่ LIFF ID จริงของคุณ
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyH3GCTvEilhxMtc4YCLbu_8V8hVHrTBgbhYXtXZCtr_IkOIxp9LSyymxMIDkxKjDkb/exec"; 
     const MY_LIFF_ID = "2011677026-ti2t0BRg"; 
 
     let userProfile = {};
+    let selectedFunds = [];
+    let searchTimeout;
 
     async function main() {
-      const nameElement = document.getElementById('userName');
-      
       try {
-        // ตรวจสอบว่าเรียก SDK ได้ไหม
-        if (typeof liff === 'undefined') {
-          nameElement.innerText = "Error: ไม่สามารถโหลด LIFF SDK ได้";
-          return;
-        }
-
-        // เริ่มต้น LIFF
         await liff.init({ liffId: MY_LIFF_ID });
-
         if (!liff.isLoggedIn()) {
           liff.login();
         } else {
           userProfile = await liff.getProfile();
-          nameElement.innerText = userProfile.displayName;
+          document.getElementById('userName').innerText = userProfile.displayName;
         }
       } catch (err) {
-        console.error("LIFF Error:", err);
-        nameElement.innerText = "เกิดข้อผิดพลาด: " + err.message;
+        document.getElementById('userName').innerText = "เกิดข้อผิดพลาด: " + err.message;
       }
     }
 
-    // เรียกฟังก์ชันหลักทันทีเมื่อโหลดหน้าเว็บ
-    document.addEventListener("DOMContentLoaded", function() {
-      main();
-    });
+    document.addEventListener("DOMContentLoaded", main);
 
+    // ค้นหากองทุนจาก SEC ผ่าน GAS
+    function onSearch(keyword) {
+      clearTimeout(searchTimeout);
+      const resultsUl = document.getElementById('searchResults');
+      
+      if (!keyword || keyword.length < 2) {
+        resultsUl.style.display = 'none';
+        return;
+      }
+
+      searchTimeout = setTimeout(async () => {
+        try {
+          const res = await fetch(`${GAS_WEB_APP_URL}?action=getFunds&q=${encodeURIComponent(keyword)}`);
+          const funds = await res.json();
+          
+          resultsUl.innerHTML = '';
+          if (Array.isArray(funds) && funds.length > 0) {
+            funds.forEach(fund => {
+              const li = document.createElement('li');
+              li.innerText = `${fund.proj_abbr_name || ''} - ${fund.proj_name_th || ''}`;
+              li.onclick = () => addFund(fund);
+              resultsUl.appendChild(li);
+            });
+            resultsUl.style.display = 'block';
+          } else {
+            resultsUl.style.display = 'none';
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }, 300);
+    }
+
+    // เพิ่มกองทุนที่เลือกลงในรายการ
+    function addFund(fund) {
+      document.getElementById('searchResults').style.display = 'none';
+      document.getElementById('searchInput').value = '';
+
+      const exists = selectedFunds.find(f => f.projId === fund.proj_id);
+      if (exists) {
+        alert("เลือกกองทุนนี้ไปแล้วครับ");
+        return;
+      }
+
+      selectedFunds.push({
+        fundId: fund.proj_abbr_name || 'FUND',
+        projId: fund.proj_id,
+        weight: 0
+      });
+
+      renderSelectedFunds();
+    }
+
+    // แสดงรายการกองทุนที่เลือกไว้
+    function renderSelectedFunds() {
+      const container = document.getElementById('selectedFundsList');
+      if (selectedFunds.length === 0) {
+        container.innerHTML = '<p style="color: #888; font-size: 14px;">ยังไม่ได้เลือกรวมกองทุน</p>';
+        updateTotal();
+        return;
+      }
+
+      container.innerHTML = '';
+      selectedFunds.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'selected-item';
+        div.innerHTML = `
+          <div>
+            <strong>${item.fundId}</strong>
+          </div>
+          <div>
+            <input type="number" value="${item.weight}" min="0" max="100" onchange="updateWeight(${index}, this.value)"> %
+            <button onclick="removeFund(${index})" style="color:red; border:none; background:none; cursor:pointer;">✕</button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+
+      updateTotal();
+    }
+
+    function updateWeight(index, value) {
+      selectedFunds[index].weight = parseFloat(value) || 0;
+      updateTotal();
+    }
+
+    function removeFund(index) {
+      selectedFunds.splice(index, 1);
+      renderSelectedFunds();
+    }
+
+    function updateTotal() {
+      const total = selectedFunds.reduce((sum, f) => sum + f.weight, 0);
+      document.getElementById('totalWeight').innerText = total;
+      
+      const submitBtn = document.getElementById('submitBtn');
+      // ปุ่มจะกดได้ก็ต่อเมื่อเลือกอย่างน้อย 1 กองทุน และผลรวม % เท่ากับ 100
+      if (selectedFunds.length > 0 && total === 100) {
+        submitBtn.disabled = false;
+      } else {
+        submitBtn.disabled = true;
+      }
+    }
+
+    // ส่งข้อมูลไปเซฟที่ GAS
     async function submitPortfolio() {
       if (!userProfile.userId) {
-        alert("ไม่พบข้อมูลผู้ใช้ LINE");
+        alert("ไม่พบข้อมูลผู้ใช้");
         return;
       }
 
@@ -71,28 +186,24 @@
         userId: userProfile.userId,
         displayName: userProfile.displayName,
         totalCapital: 1000000,
-        selectedFunds: [
-          { fundId: "K-CASH", projId: "M0000_2560", weight: 60 },
-          { fundId: "SCBDV", projId: "M0000_2560", weight: 40 }
-        ]
+        selectedFunds: selectedFunds
       };
 
       try {
-        const response = await fetch(GAS_WEB_APP_URL, {
+        const res = await fetch(GAS_WEB_APP_URL, {
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify(payload)
         });
 
-        const result = await response.json();
-
+        const result = await res.json();
         if (result.status === "success") {
           alert("บันทึกพอร์ตเรียบร้อยแล้ว!");
           liff.closeWindow();
         } else {
           alert("เกิดข้อผิดพลาด: " + result.message);
         }
-      } catch (error) {
+      } catch (err) {
         alert("ส่งข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
       }
     }
