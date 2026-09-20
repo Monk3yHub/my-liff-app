@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Investment Portfolio Simulator</title>
-  <!-- LIFF SDK & Chart.js -->
+  <title>Real SEC Portfolio Simulator</title>
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -12,7 +11,6 @@
   <style>
     :root {
       --primary: #06C755;
-      --primary-dark: #05a847;
       --bg-color: #F4F7F6;
       --card-bg: #FFFFFF;
       --text-main: #2D3748;
@@ -24,7 +22,6 @@
     body { background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 15px; }
     .container { max-width: 480px; margin: 0 auto; }
 
-    /* Header Profile */
     .profile-card {
       background: linear-gradient(135deg, #06C755 0%, #009944 100%);
       color: white; padding: 18px 20px; border-radius: 16px;
@@ -34,15 +31,13 @@
     .profile-card .user-name { font-size: 22px; font-weight: 600; }
     .capital-tag { font-size: 13px; opacity: 0.9; margin-top: 4px; }
 
-    /* Main Section Cards */
     .card {
       background: var(--card-bg); padding: 18px; border-radius: 16px;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04); margin-bottom: 15px;
       border: 1px solid var(--border-color);
     }
-    .card-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--text-main); display: flex; justify-content: space-between; align-items: center; }
+    .card-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
 
-    /* Search Component */
     .search-box { position: relative; }
     .search-input {
       width: 100%; padding: 12px 16px; border: 1.5px solid var(--border-color);
@@ -53,13 +48,12 @@
     .dropdown-list {
       position: absolute; top: 105%; left: 0; right: 0; background: white;
       border: 1px solid var(--border-color); border-radius: 10px;
-      max-height: 220px; overflow-y: auto; z-index: 100; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      max-height: 250px; overflow-y: auto; z-index: 100; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
       list-style: none; padding: 0; margin: 0; display: none;
     }
     .dropdown-list li { padding: 12px 15px; border-bottom: 1px solid #F7FAFC; cursor: pointer; }
     .dropdown-list li:hover { background-color: #E8F5E9; }
 
-    /* Selected Items List */
     .fund-item {
       display: flex; justify-content: space-between; align-items: center;
       background: #F8FAFC; padding: 10px 14px; border-radius: 10px;
@@ -71,22 +65,17 @@
       width: 65px; padding: 6px; border: 1px solid var(--border-color);
       border-radius: 6px; text-align: right; font-weight: 600; font-size: 15px;
     }
-    .btn-del { color: #E53E3E; background: none; border: none; font-size: 18px; cursor: pointer; padding: 0 4px; }
+    .btn-del { color: #E53E3E; background: none; border: none; font-size: 18px; cursor: pointer; }
 
-    /* Summary Dashboard Grid */
     .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
-    .metric-box {
-      background: #F8FAFC; padding: 12px 8px; border-radius: 10px; text-align: center;
-      border: 1px solid #EDF2F7;
-    }
-    .metric-val { font-size: 16px; font-weight: 600; color: var(--primary-dark); margin-top: 4px; }
+    .metric-box { background: #F8FAFC; padding: 12px 8px; border-radius: 10px; text-align: center; border: 1px solid #EDF2F7; }
+    .metric-val { font-size: 16px; font-weight: 600; color: #05a847; margin-top: 4px; }
     .metric-lbl { font-size: 11px; color: var(--text-muted); }
 
-    /* Submit Button */
     .btn-submit {
       width: 100%; background: var(--primary); color: white; border: none;
       padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 600;
-      cursor: pointer; box-shadow: 0 4px 12px rgba(6, 199, 85, 0.25); transition: 0.2s;
+      cursor: pointer; box-shadow: 0 4px 12px rgba(6, 199, 85, 0.25);
     }
     .btn-submit:disabled { background: #CBD5E0; box-shadow: none; cursor: not-allowed; }
 
@@ -98,34 +87,33 @@
 <body>
 
 <div class="container">
-  <!-- Profile -->
   <div class="profile-card">
-    <h2>พอร์ตจำลองการลงทุน</h2>
-    <div class="user-name" id="userName">กำลังโหลดข้อมูล...</div>
+    <h2>พอร์ตจำลองการลงทุน (ข้อมูล SEC)</h2>
+    <div class="user-name" id="userName">กำลังโหลด...</div>
     <div class="capital-tag">เงินลงทุนเริ่มต้น: 1,000,000 บาท</div>
   </div>
 
-  <!-- Step 1: Search & Select Funds -->
+  <!-- Search -->
   <div class="card">
-    <div class="card-title">1. ค้นหา & เลือกกองทุน</div>
+    <div class="card-title">1. ค้นหา & เลือกกองทุนจริงจาก SEC</div>
     <div class="search-box">
-      <input type="text" class="search-input" id="searchInput" placeholder="พิมพ์ชื่อกองทุน เช่น KT-TECHNOLOGY, SCBDV..." oninput="onSearch(this.value)" autocomplete="off">
+      <input type="text" class="search-input" id="searchInput" placeholder="พิมพ์ชื่อกองทุน เช่น A, SCB, K-..." oninput="onSearch(this.value)" autocomplete="off">
       <ul id="searchResults" class="dropdown-list"></ul>
     </div>
   </div>
 
-  <!-- Step 2: Allocation -->
+  <!-- Allocation -->
   <div class="card">
     <div class="card-title">
       <span>2. กำหนดสัดส่วนลงทุน</span>
       <span id="totalBadge" class="total-badge invalid">รวม: 0%</span>
     </div>
     <div id="selectedFundsList">
-      <p style="color: var(--text-muted); font-size: 13px; text-align: center; margin: 15px 0;">โปรดค้นหาและเลือกกองทุนด้านบน</p>
+      <p style="color: var(--text-muted); font-size: 13px; text-align: center; margin: 15px 0;">โปรดเลือกกองทุนจากรายการค้นหาด้านบน</p>
     </div>
   </div>
 
-  <!-- Step 3: Performance Summary & Chart -->
+  <!-- Results -->
   <div class="card">
     <div class="card-title">3. สรุปผลตอบแทน & ความเสี่ยง</div>
     <div class="metrics-grid">
@@ -147,13 +135,11 @@
     </div>
   </div>
 
-  <!-- Step 4: Submit -->
   <button id="submitBtn" class="btn-submit" onclick="submitPortfolio()" disabled>ยืนยันและบันทึกพอร์ต</button>
 </div>
 
 <script>
-  // ⚠️ เปลี่ยนเป็น Web App URL และ LIFF ID ของคุณ
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxwM3iutTwHRkBc6d1NhcV9tTKpYhoUrL8lLChLM_4wMqOIlIEPkmfo9rSlUXMdYPZS/exec";
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyFiJJ3_0zswUgj8aWNMNwqdSVkYoDpVb9fdJjWuqP96ILcoI1vHp6hUVPt78mChTGB/exec";
   const MY_LIFF_ID = "2011677026-ti2t0BRg";
 
   let userProfile = {};
@@ -161,27 +147,9 @@
   let searchTimeout;
   let myChart = null;
 
-  // รายชื่อกองทุน Guideline สำหรับแสดงทันทีเมื่อคลิกช่องค้นหา
-  const defaultGuidelineFunds = [
-    { proj_id: "M0001", proj_abbr_name: "SCBDV", proj_name_th: "กองทุนเปิดไทยพาณิชย์หุ้นปันผล", return: 8.5, risk: 15.2 },
-    { proj_id: "M0003", proj_abbr_name: "K-CASH", proj_name_th: "กองทุนเปิดเค ตลาดเงิน", return: 1.8, risk: 0.5 },
-    { proj_id: "M0004", proj_abbr_name: "K-USA-A(A)", proj_name_th: "กองทุนเปิดเค ยูเอสเอ หุ้นทุน-A", return: 12.4, risk: 20.1 },
-    { proj_id: "M0005", proj_abbr_name: "KF-HGTECH", proj_name_th: "กองทุนเปิดกรุงศรีโกลบอลไฮเทคมีเดีย", return: 14.2, risk: 22.8 },
-    { proj_id: "M0008", proj_abbr_name: "SCBGOLD", proj_name_th: "กองทุนเปิดไทยพาณิชย์โกลด์ฟันด์", return: 5.5, risk: 12.0 }
-  ];
-
   async function main() {
     initChart();
-    
-    // แสดง Guideline ทันทีเมื่อคลิกที่ช่องค้นหา
-    const searchInput = document.getElementById('searchInput');
-    searchInput.addEventListener('focus', () => {
-      if (!searchInput.value.trim()) {
-        renderDropdownList(defaultGuidelineFunds, "💡 กองทุนแนะนำ / ยอดนิยม", "");
-      }
-    });
 
-    // ซ่อน Dropdown เมื่อคลิกนอกพื้นที่
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.search-box')) {
         document.getElementById('searchResults').style.display = 'none';
@@ -190,9 +158,7 @@
 
     try {
       await liff.init({ liffId: MY_LIFF_ID });
-      if (!liff.isLoggedIn()) {
-        liff.login();
-      } else {
+      if (liff.isLoggedIn()) {
         userProfile = await liff.getProfile();
         document.getElementById('userName').innerText = userProfile.displayName;
       }
@@ -203,65 +169,50 @@
 
   document.addEventListener("DOMContentLoaded", main);
 
-  // ค้นหากองทุน
+  // ค้นหากองทุนแบบ Real-time Live Search
   function onSearch(keyword) {
     clearTimeout(searchTimeout);
     const kw = keyword ? keyword.trim() : "";
+    const resultsUl = document.getElementById('searchResults');
     
     if (!kw) {
-      renderDropdownList(defaultGuidelineFunds, "💡 กองทุนแนะนำ / ยอดนิยม", kw);
+      resultsUl.style.display = 'none';
       return;
     }
+
+    resultsUl.innerHTML = `<li style="font-size:12px; color:#718096; background:#F7FAFC; cursor:default; padding:10px 15px;">🔍 กำลังค้นหาข้อมูลจาก SEC...</li>`;
+    resultsUl.style.display = 'block';
 
     searchTimeout = setTimeout(async () => {
       try {
         const res = await fetch(`${GAS_WEB_APP_URL}?action=getFunds&q=${encodeURIComponent(kw)}`);
         const funds = await res.json();
-        renderDropdownList(funds, `ผลการค้นหาสำหรับ "${kw}"`, kw);
+        renderDropdownList(funds, kw);
       } catch (e) {
-        console.error(e);
-        renderDropdownList([], `ผลการค้นหาสำหรับ "${kw}"`, kw);
+        resultsUl.innerHTML = `<li style="font-size:12px; color:#E53E3E; padding:10px 15px;">❌ เชื่อมต่อ SEC ไม่สำเร็จ</li>`;
       }
-    }, 250);
+    }, 200);
   }
 
-  // แสดงผล Dropdown รายชื่อกองทุน
-  function renderDropdownList(funds, title, currentKeyword) {
+  // แสดงผลเฉพาะกองทุนที่มีอยู่จริงในฐานข้อมูล SEC
+  function renderDropdownList(funds, currentKeyword) {
     const resultsUl = document.getElementById('searchResults');
-    resultsUl.innerHTML = `<li style="font-size:12px; color:#718096; background:#F7FAFC; cursor:default; padding:6px 15px;">${title}</li>`;
-    
-    // 1. แสดงรายการกองทุนจาก API / Guideline
+    resultsUl.innerHTML = '';
+
     if (Array.isArray(funds) && funds.length > 0) {
       funds.forEach(fund => {
         const li = document.createElement('li');
-        li.innerHTML = `<strong>${fund.proj_abbr_name || 'FUND'}</strong> <br><small style="color:#718096">${fund.proj_name_th || ''}</small>`;
+        li.innerHTML = `<strong style="color:#06C755;">${fund.proj_abbr_name}</strong> <br><small style="color:#718096">${fund.proj_name_th}</small>`;
         li.onclick = () => addFund(fund);
         resultsUl.appendChild(li);
       });
+      resultsUl.style.display = 'block';
+    } else {
+      resultsUl.innerHTML = `<li style="font-size:13px; color:#E53E3E; padding:12px 15px; cursor:default;">❌ ไม่พบกองทุน "${currentKeyword}" ในฐานข้อมูล ก.ล.ต.</li>`;
+      resultsUl.style.display = 'block';
     }
-
-    // 2. ปุ่มเพิ่มกองทุนที่พิมพ์เอง
-    if (currentKeyword && currentKeyword.length > 0) {
-      const customLi = document.createElement('li');
-      customLi.style.backgroundColor = '#E8F5E9';
-      customLi.style.borderTop = '1px dashed #06C755';
-      customLi.innerHTML = `<strong style="color:#05a847;">➕ เพิ่มกองทุน "${currentKeyword.toUpperCase()}"</strong> <br><small style="color:#718096">ใช้ชื่อกองทุนตามที่คุณพิมพ์</small>`;
-      customLi.onclick = () => {
-        addFund({
-          proj_id: 'CUSTOM_' + Date.now(),
-          proj_abbr_name: currentKeyword.toUpperCase(),
-          proj_name_th: `กองทุน ${currentKeyword.toUpperCase()}`,
-          return: 10.0,
-          risk: 15.0
-        });
-      };
-      resultsUl.appendChild(customLi);
-    }
-
-    resultsUl.style.display = 'block';
   }
 
-  // เพิ่มกองทุนลงในข้อ 2
   function addFund(fund) {
     document.getElementById('searchResults').style.display = 'none';
     document.getElementById('searchInput').value = '';
@@ -272,21 +223,21 @@
     }
 
     selectedFunds.push({
-      fundId: fund.proj_abbr_name || 'FUND',
+      fundId: fund.proj_abbr_name,
       projId: fund.proj_id,
+      nameTh: fund.proj_name_th,
       weight: 0,
-      expectedReturn: fund.return || 8.0,
-      risk: fund.risk || 12.0
+      expectedReturn: fund.return,
+      risk: fund.risk
     });
 
     renderSelectedFunds();
   }
 
-  // Render รายการกองทุนที่เลือกเพื่อให้ใส่สัดส่วน (%)
   function renderSelectedFunds() {
     const container = document.getElementById('selectedFundsList');
     if (selectedFunds.length === 0) {
-      container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; text-align: center; margin: 15px 0;">โปรดคลิกค้นหาและเลือกกองทุนด้านบน</p>';
+      container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; text-align: center; margin: 15px 0;">โปรดเลือกกองทุนจากรายการค้นหาด้านบน</p>';
       calculatePortfolioMetrics();
       return;
     }
@@ -298,6 +249,7 @@
       div.innerHTML = `
         <div class="fund-info">
           <div><strong>${item.fundId}</strong></div>
+          <div style="font-size:11px; color:#718096;">${item.nameTh}</div>
         </div>
         <div class="weight-input-group">
           <input type="number" value="${item.weight === 0 ? '' : item.weight}" placeholder="0" min="0" max="100" oninput="updateWeight(${index}, this.value)"> %
@@ -320,7 +272,6 @@
     renderSelectedFunds();
   }
 
-  // คำนวณ Return, Risk, Sharpe Ratio
   function calculatePortfolioMetrics() {
     const totalWeight = selectedFunds.reduce((sum, f) => sum + f.weight, 0);
     const badge = document.getElementById('totalBadge');
@@ -345,8 +296,7 @@
       });
     }
 
-    const riskFreeRate = 2.0;
-    const sharpe = portRisk > 0 ? (portReturn - riskFreeRate) / portRisk : 0;
+    const sharpe = portRisk > 0 ? (portReturn - 2.0) / portRisk : 0;
 
     document.getElementById('expReturn').innerText = `${portReturn.toFixed(2)}%`;
     document.getElementById('portRisk').innerText = `${portRisk.toFixed(2)}%`;
@@ -362,7 +312,6 @@
       data: {
         labels: Array.from({length: 30}, (_, i) => `Day ${i+1}`),
         datasets: [{
-          label: 'มูลค่าพอร์ตจำลอง (บาท)',
           data: Array(30).fill(1000000),
           borderColor: '#06C755',
           backgroundColor: 'rgba(6, 199, 85, 0.08)',
@@ -375,17 +324,13 @@
         responsive: true,
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
-        scales: {
-          x: { display: false },
-          y: { ticks: { font: { size: 10 } } }
-        }
+        scales: { x: { display: false }, y: { ticks: { font: { size: 10 } } } }
       }
     });
   }
 
   function updateChart(ret, risk) {
     if (!myChart) return;
-    
     let currentVal = 1000000;
     const dailyReturnAvg = (ret / 100) / 252;
     const dailyVol = (risk / 100) / Math.sqrt(252);
@@ -401,7 +346,6 @@
     myChart.update();
   }
 
-  // บันทึกข้อมูล
   async function submitPortfolio() {
     const payload = {
       userId: userProfile.userId || "GUEST",
@@ -416,19 +360,13 @@
     };
 
     try {
-      const res = await fetch(GAS_WEB_APP_URL, {
+      await fetch(GAS_WEB_APP_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify(payload)
       });
-
-      const result = await res.json();
-      if (result.status === "success") {
-        alert("บันทึกพอร์ตจำลองเรียบร้อยแล้ว!");
-        liff.closeWindow();
-      } else {
-        alert("เกิดข้อผิดพลาด: " + result.message);
-      }
+      alert("บันทึกพอร์ตเรียบร้อยแล้ว!");
+      liff.closeWindow();
     } catch (err) {
       alert("ส่งข้อมูลเรียบร้อย");
       liff.closeWindow();
